@@ -20,10 +20,10 @@ defmodule Ui.Components.BodyDiff do
   @impl Scenic.Scene
   def init(_data, _opts) do
     Graph.build(font: :roboto_mono, font_size: 14)
-    |> rect({200, 200}, fill: :blue, id: :background)
+    |> rect({200, 200}, fill: :light_grey, id: :background)
+    |> text("abc\n    deleted code", fill: :black, translate: {10, 20}, text_align: :left)
     |> push_graph
 
     {:ok, nil}
   end
-
 end
