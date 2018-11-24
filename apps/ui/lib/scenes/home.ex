@@ -6,21 +6,11 @@ defmodule Ui.Scene.Home do
   import Scenic.Primitives
   # import Scenic.Components
 
-  @note """
-    This is a very simple starter application.
-
-    If you want a more full-on example, please start from:
-
-    mix scenic.new.example
-  """
+  alias Ui.Components.BodyDiff
 
   @graph Graph.build(font: :roboto, font_size: 24)
-  |> text(@note, translate: {20, 60})
+  |> BodyDiff.add_to_graph("")
 
-  # ============================================================================
-  # setup
-
-  # --------------------------------------------------------
   def init(_, _) do
     push_graph( @graph )
     {:ok, @graph}
