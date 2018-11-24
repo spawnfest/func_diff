@@ -28,13 +28,13 @@ defmodule Runner.Mix do
          cmd <- erlc_paths_cmd(name),
          {:ok, paths} when is_list(paths) <- extract_path(cmd, mix_file) do
       if Enum.all?(paths, &is_binary/1) do
-        paths
+        paths ++ ["include"]
       else
-        ["src"]
+        ["src", "include"]
       end
     else
       # try default Elixir source code path
-      _ -> ["src"]
+      _ -> ["src", "include"]
     end
   end
 
