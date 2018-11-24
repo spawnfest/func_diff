@@ -1,7 +1,11 @@
 defmodule Runner.Git do
-  @moduledoc false
+  @moduledoc """
+  Operate git repos using `git` CLI in `$PATH`.
+  """
 
   defmodule Repo do
+    @moduledoc "Defines struct for git operations."
+
     @type t :: %__MODULE__{
             working_dir: String.t(),
             local_dir: String.t(),
@@ -9,6 +13,13 @@ defmodule Runner.Git do
           }
     defstruct [:working_dir, :local_dir, :remote_addr]
 
+    @doc """
+    Populate the struct from `github_repo`, in the format of "user/repo".
+
+    Accetps addtional keyword `:working_dir`, `:local_dir` in `opts` to further
+    customize the struct, otherwise use current directory and repo name as defaults
+    respectively.
+    """
     def from_github(github_repo, opts \\ []) do
       # basic validation
       [_user, repo] = String.split(github_repo, "/")
@@ -27,6 +38,7 @@ defmodule Runner.Git do
 
   @type git_ref() :: {ref_type(), ref_name(), ref_hash()}
 
+  @doc "Clone a git repo"
   def clone_git_repo(%Repo{} = repo) do
     Porcelain.exec(
       "git",
@@ -36,6 +48,7 @@ defmodule Runner.Git do
     |> format_porcelain_result()
   end
 
+  @doc "Checkout a git repo to `target` reference (branch, tag or commit hash)"
   def git_checkout(%Repo{} = repo, target) do
     Porcelain.exec(
       "git",
@@ -45,6 +58,7 @@ defmodule Runner.Git do
     |> format_porcelain_result()
   end
 
+  @doc "List references to checkout to, including local/remote branches and tags"
   @spec list_references(Repo.t()) :: list(git_ref())
   def list_references(%Repo{} = repo) do
     repo_dir = Path.join(repo.working_dir, repo.local_dir)
