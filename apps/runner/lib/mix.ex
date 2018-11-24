@@ -7,9 +7,9 @@ defmodule Runner.Mix do
   def elixic_paths(mix_file) do
     with {:ok, content} <- File.read(mix_file),
          {:ok, ast} <- Code.string_to_quoted(content),
-         {:defmodule, _, [{:__aliases__, _, names} | _]} <- ast,
-         cmd <- elixirc_paths_cmd(names),
-         paths when is_list(paths) <- extract_path(cmd, mix_file) do
+         name <- find_project_name(ast),
+         cmd <- elixirc_paths_cmd(name),
+         {:ok, paths} when is_list(paths) <- extract_path(cmd, mix_file) do
       if Enum.all?(paths, &is_binary/1) do
         paths
       else
@@ -24,9 +24,9 @@ defmodule Runner.Mix do
   def erlc_paths(mix_file) do
     with {:ok, content} <- File.read(mix_file),
          {:ok, ast} <- Code.string_to_quoted(content),
-         {:defmodule, _, [{:__aliases__, _, names} | _]} <- ast,
-         cmd <- erlc_paths_cmd(names),
-         paths when is_list(paths) <- extract_path(cmd, mix_file) do
+         name <- find_project_name(ast),
+         cmd <- erlc_paths_cmd(name),
+         {:ok, paths} when is_list(paths) <- extract_path(cmd, mix_file) do
       if Enum.all?(paths, &is_binary/1) do
         paths
       else
@@ -38,18 +38,24 @@ defmodule Runner.Mix do
     end
   end
 
-  defp elixirc_paths_cmd(names) do
+  defp find_project_name(ast), do: do_fpn(ast, [])
+
+  defp do_fpn({:defmodule, _, [{:__aliases__, _, names} | _]}, _) do
     names
     |> Enum.map(&to_string/1)
     |> Enum.join(".")
-    |> Kernel.<>(".project[:elixirc_paths] |> IO.inspect")
   end
 
-  defp erlc_paths_cmd(names) do
-    names
-    |> Enum.map(&to_string/1)
-    |> Enum.join(".")
-    |> Kernel.<>(".project[:erlc_paths] |> IO.inspect")
+  defp do_fpn({_, _, [h | t]}, acc), do: do_fpn(h, acc ++ t)
+  defp do_fpn(_, [h | t]), do: do_fpn(h, t)
+  defp do_fpn(_, []), do: {:error, :no_project}
+
+  defp elixirc_paths_cmd(name) do
+    name <> ".project[:elixirc_paths] |> IO.inspect"
+  end
+
+  defp erlc_paths_cmd(name) do
+    name <> ".project[:erlc_paths] |> IO.inspect"
   end
 
   defp extract_path(cmd, mix_file) do
