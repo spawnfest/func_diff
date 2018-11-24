@@ -32,6 +32,8 @@ defmodule Runner.Git do
     end
   end
 
+  @type result() :: {:ok, String.t()} | {:error, any()}
+
   @type ref_type() :: :local | :remote | :tag
   @type ref_name() :: String.t()
   @type ref_hash() :: String.t()
@@ -39,7 +41,8 @@ defmodule Runner.Git do
   @type git_ref() :: {ref_type(), ref_name(), ref_hash()}
 
   @doc "Clone a git repo"
-  def clone_git_repo(%Repo{} = repo) do
+  @spec clone(Repo.t()) :: result()
+  def clone(%Repo{} = repo) do
     Porcelain.exec(
       "git",
       ["clone", "-q", repo.remote_addr, repo.local_dir],
@@ -49,7 +52,8 @@ defmodule Runner.Git do
   end
 
   @doc "Checkout a git repo to `target` reference (branch, tag or commit hash)"
-  def git_checkout(%Repo{} = repo, target) do
+  @spec checkout(Repo.t(), ref_hash() | ref_name()) :: result()
+  def checkout(%Repo{} = repo, target) do
     Porcelain.exec(
       "git",
       ["checkout", target],
@@ -86,6 +90,7 @@ defmodule Runner.Git do
     end)
   end
 
+  @spec format_porcelain_result(any()) :: result()
   defp format_porcelain_result(result) do
     case result do
       %Porcelain.Result{status: 0, out: out} ->
