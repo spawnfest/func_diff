@@ -102,20 +102,25 @@ defmodule Parser do
 
   defp extract_functions([{:def, meta, func_info} | t], module_info = %{functions: functions}) do
     function = parse_function(func_info, %FunctionInfo{start_line: Keyword.get(meta, :line)})
+
     extract_functions(t, %{module_info | functions: [function | update_end_line(meta, functions)]})
   end
 
   defp extract_functions([{:defp, meta, func_info} | t], module_info = %{functions: functions}) do
     function = parse_function(func_info, %FunctionInfo{start_line: Keyword.get(meta, :line)})
+
     extract_functions(t, %{module_info | functions: [function | update_end_line(meta, functions)]})
   end
 
-  defp extract_functions([{_, meta, _} | t], module_info = %{functions: functions}), do:
-    extract_functions(t, %{module_info|functions: update_end_line(meta, functions)})
-  defp extract_functions([_|t], module_info), do: extract_functions(t, module_info)
+  defp extract_functions([{_, meta, _} | t], module_info = %{functions: functions}),
+    do: extract_functions(t, %{module_info | functions: update_end_line(meta, functions)})
+
+  defp extract_functions([_ | t], module_info), do: extract_functions(t, module_info)
 
   defp update_end_line(_meta, []), do: []
-  defp update_end_line(meta, [function|t]), do: [%{function|end_line: Keyword.get(meta, :line)}|t]
+
+  defp update_end_line(meta, [function | t]),
+    do: [%{function | end_line: Keyword.get(meta, :line)} | t]
 
   defp extract_macros(module_info, []), do: module_info
 
