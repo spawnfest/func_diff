@@ -4,7 +4,7 @@ defmodule Runner.DiffTest do
   import Runner.Diff
 
   test "diff output" do
-    output = diff( File.read!("test/priv/text1"), File.read!("test/priv/text2") )
+    output = diff(File.read!("test/priv/text1"), File.read!("test/priv/text2"))
 
     expected = [
       {:add, "line0"},

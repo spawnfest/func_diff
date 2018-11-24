@@ -86,11 +86,13 @@ defmodule Runner.Mix do
   def list_source_files(mix_file) do
     project_path = Path.dirname(mix_file)
 
-    ex_paths = elixirc_paths(mix_file)
-    |> Enum.join(",")
+    ex_paths =
+      elixirc_paths(mix_file)
+      |> Enum.join(",")
 
-    erl_paths = erlang_paths(mix_file)
-    |> Enum.join(",")
+    erl_paths =
+      erlang_paths(mix_file)
+      |> Enum.join(",")
 
     {
       Path.wildcard(project_path <> "/{" <> ex_paths <> "}/**/*.ex"),
