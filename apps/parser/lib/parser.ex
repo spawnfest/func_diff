@@ -46,7 +46,7 @@ defmodule Parser do
   def process(file_paths) when is_list(file_paths),
     do:
       file_paths
-      |> Enum.map(&process/1)
+      |> Enum.flat_map(&process/1)
 
   def process(file_path), do: parse_file(file_path)
 
