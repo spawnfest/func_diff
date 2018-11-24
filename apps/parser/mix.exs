@@ -24,8 +24,6 @@ defmodule Parser.MixProject do
 
   # Run "mix help deps" to learn about dependencies.
   defp deps do
-    [
-      {:utils, git: "https://github.com/fdfzcq/utils.git"}
-    ]
+    []
   end
 end
