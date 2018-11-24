@@ -1,21 +1,18 @@
 # Parser
 
-**TODO: Add description**
+Parse Elixir code.
 
-## Installation
+TODO:
 
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `parser` to your list of dependencies in `mix.exs`:
+- function arity
+- function end line (or read the body text)
 
-```elixir
-def deps do
-  [
-    {:parser, "~> 0.1.0"}
-  ]
-end
-```
+- add some tests for confidence
+  - single module
+  - multiple module
+  - nested module
+  - one line function
+  - multi bodies function
+  - function with deeper level of case/if (nested `end`)
 
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at [https://hexdocs.pm/parser](https://hexdocs.pm/parser).
-
+- parse Erlang codes
