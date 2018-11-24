@@ -1,0 +1,2 @@
+defmodule FuncDiffAPI do
+end
