@@ -4,7 +4,7 @@ defmodule Runner.Mix do
   from a project's `mix.exs` file.
   """
 
-  def elixic_paths(mix_file) do
+  def elixirc_paths(mix_file) do
     with {:ok, content} <- File.read(mix_file),
          {:ok, ast} <- Code.string_to_quoted(content),
          name <- find_project_name(ast),
@@ -86,7 +86,7 @@ defmodule Runner.Mix do
   def list_source_files(mix_file) do
     project_path = Path.dirname(mix_file)
 
-    ex_paths = elixic_paths(mix_file)
+    ex_paths = elixirc_paths(mix_file)
     |> Enum.join(",")
 
     erl_paths = erlang_paths(mix_file)
