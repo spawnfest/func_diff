@@ -2,11 +2,16 @@ defmodule Runner.Git do
   @moduledoc false
 
   defmodule Repo do
+    @type t :: %__MODULE__{
+            working_dir: String.t(),
+            local_dir: String.t(),
+            remote_addr: String.t()
+          }
     defstruct [:working_dir, :local_dir, :remote_addr]
 
     def from_github(github_repo, opts \\ []) do
       # basic validation
-      [user, repo] = String.split(github_repo, "/")
+      [_user, repo] = String.split(github_repo, "/")
 
       %__MODULE__{
         remote_addr: "https://github.com/#{github_repo}.git",
@@ -16,22 +21,61 @@ defmodule Runner.Git do
     end
   end
 
+  @type ref_type() :: :local | :remote | :tag
+  @type ref_name() :: String.t()
+  @type ref_hash() :: String.t()
+
+  @type git_ref() :: {ref_type(), ref_name(), ref_hash()}
+
   def clone_git_repo(%Repo{} = repo) do
-    Porcelain.exec("git", ["clone", "-q", repo.remote_addr, repo.local_dir],
+    Porcelain.exec(
+      "git",
+      ["clone", "-q", repo.remote_addr, repo.local_dir],
       dir: repo.working_dir
     )
     |> format_porcelain_result()
   end
 
   def git_checkout(%Repo{} = repo, target) do
-    Porcelain.exec("git", ["checkout", target], dir: repo.working_dir)
+    Porcelain.exec(
+      "git",
+      ["checkout", target],
+      dir: repo.working_dir
+    )
     |> format_porcelain_result()
+  end
+
+  @spec list_references(Repo.t()) :: list(git_ref())
+  def list_references(%Repo{} = repo) do
+    repo_dir = Path.join(repo.working_dir, repo.local_dir)
+
+    %Porcelain.Result{out: out} = Porcelain.exec("git", ["show-ref"], dir: repo_dir)
+
+    out
+    |> String.split("\n", trim: true)
+    |> Enum.flat_map(fn line ->
+      [hash, "refs/" <> ref_detail] = String.split(line)
+
+      case String.split(ref_detail, "/", parts: 2) do
+        ["heads", name] ->
+          [{:local, name, hash}]
+
+        ["remotes", name] ->
+          [{:remote, name, hash}]
+
+        ["tags", name] ->
+          [{:tag, name, hash}]
+
+        _ ->
+          []
+      end
+    end)
   end
 
   defp format_porcelain_result(result) do
     case result do
-      %Porcelain.Result{status: 0} ->
-        :ok
+      %Porcelain.Result{status: 0, out: out} ->
+        {:ok, out}
 
       %Porcelain.Result{err: err} ->
         {:error, err}
