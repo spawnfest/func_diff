@@ -9,3 +9,6 @@ TODO:
 
 - word diff?
 - syntax highlight?
+
+- scrolling for long function body
+  - or pagination
