@@ -76,4 +76,25 @@ defmodule Runner.Mix do
         {:error, :unknown}
     end
   end
+
+  @doc """
+  Reads a `mix_file` and uses its `elixirc_paths` and `erlc_paths` to list all source files.
+
+  Returns a tuple of two lists, first list contains Elixir source files, and second list
+  contains Erlang source files.
+  """
+  def list_source_files(mix_file) do
+    project_path = Path.dirname(mix_file)
+
+    ex_paths = elixic_paths(mix_file)
+    |> Enum.join(",")
+
+    erl_paths = erlc_paths(mix_file)
+    |> Enum.join(",")
+
+    {
+      Path.wildcard(project_path <> "/{" <> ex_paths <> "}/**/*.ex"),
+      Path.wildcard(project_path <> "/{" <> erl_paths <> "}/**/*.{erl,hrl}")
+    }
+  end
 end
