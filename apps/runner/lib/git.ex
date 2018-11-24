@@ -51,6 +51,36 @@ defmodule Runner.Git do
     |> format_porcelain_result()
   end
 
+  @doc "Pull all remotes of a git repo"
+  @spec pull(Repo.t()) :: result()
+  def pull(%Repo{} = repo) do
+    repo_dir = Path.join(repo.working_dir, repo.local_dir)
+
+    Porcelain.exec(
+      "git",
+      ["pull", "--all", "--ff-only", "-q", "--no-stat"],
+      dir: repo_dir
+    )
+    |> format_porcelain_result()
+  end
+
+  @doc "Clone a repo if not locally exist, otherwise pull all remotes"
+  @spec clone_or_pull(Repo.t()) :: result()
+  def clone_or_pull(%Repo{} = repo) do
+    repo_dir = Path.join(repo.working_dir, repo.local_dir)
+
+    case {File.exists?(repo_dir), File.dir?(repo_dir)} do
+      {false, false} ->
+        clone(repo)
+
+      {true, true} ->
+        pull(repo)
+
+      _ ->
+        {:error, :bad_repo}
+    end
+  end
+
   @doc "Checkout a git repo to `target` reference (branch, tag or commit hash)"
   @spec checkout(Repo.t(), ref_hash() | ref_name()) :: result()
   def checkout(%Repo{} = repo, target) do
