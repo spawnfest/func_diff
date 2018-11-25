@@ -131,10 +131,13 @@ defmodule FuncDiffAPI.ComparisonActor do
     new_module_diff = Map.put(state.module_diff, target_module.name, mod_diff)
 
     new_func_diff =
-      Enum.reduce(target_module.defs, state.func_diff, fn df, acc ->
+      Enum.map(target_module.defs, fn df ->
         body_diff = Enum.map(df.body, fn line -> {:add, line} end)
-        Map.put(acc, {target_module.name, df_id(df)}, body_diff)
+        key = {target_module.name, df_id(df)}
+        {key, body_diff}
       end)
+      |> Enum.into(%{})
+      |> Map.merge(state.func_diff)
 
     %{
       state
@@ -152,10 +155,13 @@ defmodule FuncDiffAPI.ComparisonActor do
     new_module_diff = Map.put(state.module_diff, base_module.name, mod_diff)
 
     new_func_diff =
-      Enum.reduce(base_module.defs, state.func_diff, fn df, acc ->
+      Enum.map(base_module.defs, fn df ->
         body_diff = Enum.map(df.body, fn line -> {:del, line} end)
-        Map.put(acc, {base_module.name, df_id(df)}, body_diff)
+        key = {base_module.name, df_id(df)}
+        {key, body_diff}
       end)
+      |> Enum.into(%{})
+      |> Map.merge(state.func_diff)
 
     %{
       state
@@ -167,7 +173,72 @@ defmodule FuncDiffAPI.ComparisonActor do
 
   # changed/common module
   defp diff_module(state, base_module, target_module) do
-    state
+    base_defs_map = base_module.defs |> Enum.map(fn df -> {df_id(df), df} end) |> Enum.into(%{})
+
+    target_defs_map =
+      target_module.defs |> Enum.map(fn df -> {df_id(df), df} end) |> Enum.into(%{})
+
+    set_a = base_defs_map |> Map.keys() |> MapSet.new()
+    set_b = target_defs_map |> Map.keys() |> MapSet.new()
+
+    defs_diff =
+      MapSet.union(set_a, set_b)
+      |> Enum.map(fn func_id ->
+        a = Map.get(base_defs_map, func_id, nil)
+        b = Map.get(target_defs_map, func_id, nil)
+
+        diff_body(a, b)
+      end)
+
+    mod_status =
+      if Enum.all?(defs_diff, fn {status, _, _} -> status == :common end) do
+        :common
+      else
+        :change
+      end
+
+    new_modules_diff = [{mod_status, base_module.name} | state.modules_diff]
+
+    mod_diff = Enum.map(defs_diff, fn {status, id, _} -> {status, id} end)
+    new_module_diff = Map.put(state.module_diff, base_module.name, mod_diff)
+
+    new_func_diff =
+      Enum.map(defs_diff, fn {_, func_id, body_diff} ->
+        key = {target_module.name, func_id}
+        {key, body_diff}
+      end)
+      |> Enum.into(%{})
+      |> Map.merge(state.func_diff)
+
+    %{
+      state
+      | modules_diff: new_modules_diff,
+        module_diff: new_module_diff,
+        func_diff: new_func_diff
+    }
+  end
+
+  defp diff_body(nil, target_df) do
+    body_diff = Enum.map(target_df.body, fn line -> {:add, line} end)
+    {:add, df_id(target_df), body_diff}
+  end
+
+  defp diff_body(base_df, nil) do
+    body_diff = Enum.map(base_df.body, fn line -> {:del, line} end)
+    {:del, df_id(base_df), body_diff}
+  end
+
+  defp diff_body(base_df, target_df) do
+    text_a = Enum.join(base_df.body, "\n")
+    text_b = Enum.join(target_df.body, "\n")
+
+    if String.equivalent?(text_a, text_b) do
+      body_diff = Enum.map(target_df.body, fn line -> {:common, line} end)
+      {:common, df_id(target_df), body_diff}
+    else
+      body_diff = Runner.Diff.diff(text_a, text_b)
+      {:change, df_id(target_df), body_diff}
+    end
   end
 
   defp df_id(df), do: "#{df.name}/#{df.arity}"
