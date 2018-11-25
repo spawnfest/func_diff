@@ -160,8 +160,8 @@ defmodule FuncDiffAPI.ComparisonActor do
     %{
       state
       | modules_diff: new_modules_diff,
-      module_diff: new_module_diff,
-      func_diff: new_func_diff
+        module_diff: new_module_diff,
+        func_diff: new_func_diff
     }
   end
 
