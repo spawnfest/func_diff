@@ -38,12 +38,12 @@ defmodule Runner.Diff do
         {:common, line}
       end)
 
-    parse_diff(init_lines, diffs, {0, 0}, {lines_b, 0})
+    parse_diff(init_lines, diffs, {0, 0, 0}, {lines_b, 0})
   end
 
   defp parse_result(_, _, _), do: []
 
-  # defp parse_diff(lines, diffs, {pos_a, offset_a}, {lines_b, pos_b})
+  # defp parse_diff(lines, diffs, {pos_a, offset_a, offset_modifier}, {lines_b, pos_b})
 
   defp parse_diff(lines, [], _, _), do: lines
 
@@ -51,7 +51,7 @@ defmodule Runner.Diff do
     parse_diff(lines, rest_diff, a, b)
   end
 
-  defp parse_diff(lines, ["<" <> _ | rest_diff], {pos_a, offset_a} = a, b) do
+  defp parse_diff(lines, ["<" <> _ | rest_diff], {pos_a, offset_a, _} = a, b) do
     parse_diff(
       List.update_at(lines, pos_a - 1 + offset_a, fn {:common, line} -> {:del, line} end),
       rest_diff,
@@ -60,23 +60,23 @@ defmodule Runner.Diff do
     )
   end
 
-  defp parse_diff(lines, [">" <> _ | rest_diff], {pos_a, offset_a}, {lines_b, pos_b}) do
+  defp parse_diff(lines, [">" <> _ | rest_diff], {pos_a, offset_a, offset_modifier}, {lines_b, pos_b}) do
     add_line = {:add, Enum.at(lines_b, pos_b - 1)}
 
     parse_diff(
       List.insert_at(lines, pos_a + offset_a, add_line),
       rest_diff,
-      {pos_a + 1, offset_a + 1},
+      {pos_a + 1, offset_a, offset_modifier + 1},
       {lines_b, pos_b + 1}
     )
   end
 
-  @cmd_regex ~r/(\d+)[acd](\d+)/
-  defp parse_diff(lines, [cmd | rest_diff], {_, offset_a}, {lines_b, _}) do
+  @cmd_regex ~r/([\d,]+)[acd]([\d,]+)/
+  defp parse_diff(lines, [cmd | rest_diff], {_, offset_a, offset_modifier}, {lines_b, _}) do
     [a, b] = Regex.run(@cmd_regex, cmd, capture: :all_but_first)
-    int_a = String.to_integer(a)
-    int_b = String.to_integer(b)
+    int_a = a |> String.split(",") |> Enum.at(0) |> String.to_integer()
+    int_b = b |> String.split(",") |> Enum.at(0) |> String.to_integer()
 
-    parse_diff(lines, rest_diff, {int_a, offset_a}, {lines_b, int_b})
+    parse_diff(lines, rest_diff, {int_a, offset_a + offset_modifier, 0}, {lines_b, int_b})
   end
 end
