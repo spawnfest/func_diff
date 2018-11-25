@@ -14,7 +14,10 @@ defmodule FuncDiffAPI.ComparisonActor do
     :target_ref,
     :mix_file,
     :base_modules,
-    :target_modules
+    :target_modules,
+    :modules_diff,
+    :module_diff,
+    :func_diff
   ]
 
   ## APIs
@@ -63,17 +66,26 @@ defmodule FuncDiffAPI.ComparisonActor do
 
     Runner.Git.checkout(state.runner_git_repo, state.base_ref)
     {ex_files, _erl_files} = Runner.Mix.list_source_files(state.mix_file)
-    base_modules = Parser.process(ex_files)
+
+    base_modules =
+      Parser.process(ex_files) |> Enum.map(fn mod -> {mod.name, mod} end) |> Enum.into(%{})
 
     Runner.Git.checkout(state.runner_git_repo, state.target_ref)
     {ex_files, _erl_files} = Runner.Mix.list_source_files(state.mix_file)
-    target_modules = Parser.process(ex_files)
 
-    new_state = %{
-      state
-      | base_modules: base_modules,
-        target_modules: target_modules
-    }
+    target_modules =
+      Parser.process(ex_files) |> Enum.map(fn mod -> {mod.name, mod} end) |> Enum.into(%{})
+
+    new_state =
+      %{
+        state
+        | base_modules: base_modules,
+          target_modules: target_modules,
+          modules_diff: [],
+          module_diff: %{},
+          func_diff: %{}
+      }
+      |> diff()
 
     {:noreply, new_state}
   end
@@ -89,4 +101,58 @@ defmodule FuncDiffAPI.ComparisonActor do
   def handle_call(:get_state, _, state) do
     {:reply, state, state}
   end
+
+  ## private functions
+  defp diff(state) do
+    base_mods =
+      state.base_modules
+      |> Map.keys()
+      |> Enum.into(MapSet.new())
+
+    target_mods =
+      state.target_modules
+      |> Map.keys()
+      |> Enum.into(MapSet.new())
+
+    MapSet.union(base_mods, target_mods)
+    |> Enum.reduce(state, fn module_name, state_acc ->
+      a = Map.get(state.base_modules, module_name, nil)
+      b = Map.get(state.target_modules, module_name, nil)
+
+      diff_module(state_acc, a, b)
+    end)
+  end
+
+  # added module
+  defp diff_module(state, nil, target_module) do
+    new_modules_diff = [{:add, target_module.name} | state.modules_diff]
+
+    mod_diff = Enum.map(target_module.defs, fn df -> {:add, df_id(df)} end)
+    new_module_diff = Map.put(state.module_diff, target_module.name, mod_diff)
+
+    new_func_diff =
+      Enum.reduce(target_module.defs, state.func_diff, fn df, acc ->
+        body_diff = Enum.map(df.body, fn line -> {:add, line} end)
+        Map.put(acc, {target_module.name, df_id(df)}, body_diff)
+      end)
+
+    %{
+      state
+      | modules_diff: new_modules_diff,
+        module_diff: new_module_diff,
+        func_diff: new_func_diff
+    }
+  end
+
+  # deleted module
+  defp diff_module(state, base_module, nil) do
+    state
+  end
+
+  # changed/common module
+  defp diff_module(state, base_module, target_module) do
+    state
+  end
+
+  defp df_id(df), do: "#{df.name}/#{df.arity}"
 end
