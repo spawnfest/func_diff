@@ -92,6 +92,7 @@ defmodule Parser do
   defp extract_do_block([]), do: []
   defp extract_do_block([h | _t]) when is_list(h), do: extract_do_block(h)
   defp extract_do_block([{:do, {:__block__, [], block}} | _]), do: block
+  defp extract_do_block([{:do, block}]), do: [block]
   defp extract_do_block([_ | t]), do: extract_do_block(t)
 
   defp extract_functions([], module_info = %{functions: functions}),
