@@ -184,5 +184,30 @@ defmodule Parser.UnifyTest do
                }
              ] = actual
     end
+
+    test "with attributes" do
+      actual = process_file("test/priv/functions/with_attributes.ex")
+
+      assert [
+               %ModuleInfo{
+                 defs: [
+                   %Defined{
+                     name: :foo,
+                     start_line: 2,
+                     end_line: 5,
+                     arity: 1,
+                     private?: false
+                   },
+                   %Defined{
+                     name: :bar,
+                     start_line: 7,
+                     end_line: 10,
+                     arity: 1,
+                     private?: false
+                   }
+                 ]
+               }
+             ] = actual
+    end
   end
 end
