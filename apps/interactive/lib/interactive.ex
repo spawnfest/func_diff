@@ -34,4 +34,27 @@ defmodule Interactive do
   def debug_state(%Token{} = token) do
     CA.get_state(token.pid)
   end
+
+  def debug_print() do
+    diff = [
+      {:add, "line0"},
+      {:common, "line1"},
+      {:common, "line2"},
+      {:del, "line3"},
+      {:add, "line4"},
+      {:common, "line5"},
+      {:del, "line6"}
+    ]
+
+    Enum.each(diff, fn
+      {:add, line} ->
+        IO.ANSI.format([:light_green_background, :black, "+ " <> line]) |> IO.puts()
+
+      {:del, line} ->
+        IO.ANSI.format([:light_black_background, :light_cyan, "- " <> line]) |> IO.puts()
+
+      {:common, line} ->
+        IO.puts("  " <> line)
+    end)
+  end
 end

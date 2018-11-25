@@ -21,8 +21,7 @@ defmodule Interactive.MixProject do
 
   defp deps do
     [
-      {:fd_api, in_umbrella: true},
-      {:bunt, "~> 0.2"}
+      {:fd_api, in_umbrella: true}
     ]
   end
 end
