@@ -1,6 +1,6 @@
 # FuncDiff
 
-Diff ~~Erlang~~™/Elixir projects by modules and functions (across git branches).
+Diff ~~Erlang~~™/Elixir projects by modules and functions (including its doc and typespec) across git branches.
 
 ## Backstory
 
@@ -50,6 +50,8 @@ func(t, "Plug.Builder", "traverse/2")
 semver_check(t)
 ```
 
+Feel free to try it out on any Elixir projects, though it might not always work (it fails on `absinthe` for example). Another example that works is one of my toy project, like this: `new_diff("HaloWordApp/halosir", "46744072915c21bfe1a98b4ffbb0f77ea67ed78c", "2.1.0")`
+
 To use it as a library, check the next section.
 
 ## Architecture & Tests
@@ -62,13 +64,16 @@ Then `fd_api` is the integration point of these two underlying parts, it also wr
 
 Finally `interactive` is an frontend example, basically further wrapping `fd_api` and hide "implementation details" behind the opaque type "token". With the "token" we can access different level of diff in a straightforward way.
 
-## Further Ideas & TODOs
+The only place we have comprehensive test is `parser`, I relied on those during the refactor into `Parser.Unify`. I later fixed several bugs in diff format parsing as well, I forgot I have a simple test case setup, so in the end just fixed inline, but more test would certainly help.
 
-- Erlang code
-- module content diff
-- more accurate semver check, integration into packaging services
-- `use`
+## Future Ideas & TODOs
 
-- `elixirc_paths`
+Of course there're always more ideas to explore, and we have a few of our own to start with, discussed during the development, and just other random ideas if other people find this project interesting/useful and would like to follow up :)
 
+- parse Erlang code, to be fair this was the original request >,< I tried a few things ([a](https://github.com/efcasado/forms), [b](http://erlang.org/doc/man/epp.html#parse_file-2)) prior but couldn't really figure out how to get rid of preprocessing, mostly because I want a non-intrusive way of parsing another code base. These ref [a](https://stackoverflow.com/questions/28084192/what-am-i-doing-wrong-with-erl-parseparse-form) [b](http://studzien.github.io/hack-vm/part1.html#slide-0) might be useful but for this SpawnFest we decide to start with Elixir first and didn' really have time to look into parsing Erlang code.
+- diff module content, we're only looking at source code diff for functions, but modules can also have attributes and even "function body" as well, so it would be more accurate if we can account for module content.
+- check for `use`, `use` is a special macro that would inject code from another module's `__using__/1` macro output. The idea here is to track `__using__/1` changes and mark modules that `use` it according to the diff status.
+- use `elixirc_paths` and `erlc_paths`, not sure whether this is a sane idea, but I tried anyway (the code is still in `Runner.Mix`). The problem is to account for using a function to source this value instead of literal values, I kinda have to `mix run` within the project, and even though I can provide `"--no-start", "--no-deps-check", "--no-compile"` to disable compiling/running the actual target project code as much as possible, in the end I still need to load the mix configuration. And that proves to be a big problem for example if the project tries to import a "secret" config file that is (correctly) not tracked in the git repo. With `erlc_paths` the issue is it doesn't have "include" paths which I think is important to track for Erlang projects. So for now I'm hardcoding where to search Elixir and Erlang codes.
 - arbitary git repo, this is already supported by lower-level functions, just need to expose it in outer interface
+- "move" as a diff status, like what `git mv` provides, we thought about maybe checking similarities of AST, but didn't go too far on this front.
+- more accurate semver check, even integration into packaging services. We discussed several ideas on what should be count as "public API", one idea is to check whether it's documented with `@moduledoc` and `@doc`, but due to limited time we didn't really work on this. But if we have some solid way to determine public APIs then my idea is to provide the semver requirement like [Elm's packaging ecosystem](https://github.com/elm-lang/elm-package/blob/a8248bb4fa9433a816360b430be24e30be10dcff/README.md#version-rules)
