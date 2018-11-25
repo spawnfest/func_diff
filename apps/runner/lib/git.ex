@@ -9,9 +9,10 @@ defmodule Runner.Git do
     @type t :: %__MODULE__{
             working_dir: String.t(),
             local_dir: String.t(),
-            remote_addr: String.t()
+            remote_addr: String.t(),
+            full_path: String.t()
           }
-    defstruct [:working_dir, :local_dir, :remote_addr]
+    defstruct [:working_dir, :local_dir, :remote_addr, :full_path]
 
     @doc """
     Populate the struct from `github_repo`, in the format of "user/repo".
@@ -23,11 +24,14 @@ defmodule Runner.Git do
     def from_github(github_repo, opts \\ []) do
       # basic validation
       [_user, repo] = String.split(github_repo, "/")
+      local = Keyword.get(opts, :local_dir, repo)
+      work = Keyword.get(opts, :working_dir, ".")
 
       %__MODULE__{
         remote_addr: "https://github.com/#{github_repo}.git",
-        local_dir: Keyword.get(opts, :local_dir, repo),
-        working_dir: Keyword.get(opts, :working_dir, ".")
+        local_dir: local,
+        working_dir: work,
+        full_path: Path.join(work, local)
       }
     end
   end
@@ -54,12 +58,10 @@ defmodule Runner.Git do
   @doc "Pull all remotes of a git repo"
   @spec pull(Repo.t()) :: result()
   def pull(%Repo{} = repo) do
-    repo_dir = Path.join(repo.working_dir, repo.local_dir)
-
     Porcelain.exec(
       "git",
       ["pull", "--all", "--ff-only", "-q", "--no-stat"],
-      dir: repo_dir
+      dir: repo.full_path
     )
     |> format_porcelain_result()
   end
@@ -67,13 +69,13 @@ defmodule Runner.Git do
   @doc "Clone a repo if not locally exist, otherwise pull all remotes"
   @spec clone_or_pull(Repo.t()) :: result()
   def clone_or_pull(%Repo{} = repo) do
-    repo_dir = Path.join(repo.working_dir, repo.local_dir)
-
-    case {File.exists?(repo_dir), File.dir?(repo_dir)} do
+    case {File.exists?(repo.full_path), File.dir?(repo.full_path)} do
       {false, false} ->
         clone(repo)
+        pull(repo)
 
       {true, true} ->
+        checkout(repo, "master")
         pull(repo)
 
       _ ->
@@ -86,8 +88,8 @@ defmodule Runner.Git do
   def checkout(%Repo{} = repo, target) do
     Porcelain.exec(
       "git",
-      ["checkout", target],
-      dir: repo.working_dir
+      ["checkout", "-q", target],
+      dir: repo.full_path
     )
     |> format_porcelain_result()
   end
@@ -95,9 +97,7 @@ defmodule Runner.Git do
   @doc "List references to checkout to, including local/remote branches and tags"
   @spec list_references(Repo.t()) :: list(git_ref())
   def list_references(%Repo{} = repo) do
-    repo_dir = Path.join(repo.working_dir, repo.local_dir)
-
-    %Porcelain.Result{out: out} = Porcelain.exec("git", ["show-ref"], dir: repo_dir)
+    %Porcelain.Result{out: out} = Porcelain.exec("git", ["show-ref"], dir: repo.full_path)
 
     out
     |> String.split("\n", trim: true)
