@@ -18,6 +18,19 @@ defmodule Parser.Unify do
       arity: nil,
       private?: false
     )
+
+    defimpl Inspect do
+      def inspect(df, _) do
+        deco =
+          if df.private? do
+            "(priv)"
+          else
+            "(pub)"
+          end
+
+        "<#Definition #{df.name}/#{df.arity} #{deco} #{df.start_line} - #{df.end_line}>"
+      end
+    end
   end
 
   def entry(file) do
