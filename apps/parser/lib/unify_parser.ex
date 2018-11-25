@@ -5,7 +5,7 @@ defmodule Parser.Unify do
 
   defmodule Defined do
     @type t() :: %__MODULE__{
-            name: binary() | nil,
+            name: atom() | nil,
             start_line: integer() | nil,
             end_line: integer() | nil,
             arity: integer() | nil,
@@ -33,7 +33,7 @@ defmodule Parser.Unify do
     end
   end
 
-  def entry(file) do
+  def process_file(file) do
     file_content = File.read!(file)
     file_lines = String.split(file_content, "\n")
 
