@@ -106,9 +106,11 @@ defmodule Interactive do
   """
   def semver_check(%Token{} = token) do
     state = CA.get_state(token.pid)
+    semver_change = get_semver_change(state.base_ref, state.target_ref)
     state
-    |> Map.get(:func_diff)
-    |> SemverChecker.process(state.base_ref, state.target_ref)
+    |> Map.get(:degree_of_change)
+    |> IO.inspect
+    |> check_semver(semver_change)
   end
 
   ## debug helpers
@@ -137,4 +139,17 @@ defmodule Interactive do
     (deco <> " " <> line)
     |> String.pad_trailing(pad)
   end
+
+  defp check_semver(change, change), do: {:ok, :valid_semver_change}
+  defp check_semver(expected, changed), do: {:error, "expected :#{expected}, got :#{changed}"}
+
+  defp get_semver_change(base_ref, target_ref), do:
+    get_semver_change(String.split(base_ref, "."), String.split(target_ref, "."), :major)
+  defp get_semver_change([], [], _), do: :semver_not_changed
+  defp get_semver_change([n|tb], [n|tt], change), do:
+    get_semver_change(tb, tt, next(change))
+  defp get_semver_change(_, _, change), do: change
+
+  defp next(:major), do: :minor
+  defp next(:minor), do: :patch
 end
