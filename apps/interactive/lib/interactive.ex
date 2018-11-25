@@ -81,10 +81,13 @@ defmodule Interactive do
     - `module(t, module_name)` to list func diff within a module
     - `func(t, module_name, func_id)` to show source code diff for a given function
     (or macro)
-    - `semver_check(t)` to check if the semver change aligns with the semver specifications
+    - `semver_check(t)`, `semver_check(t, change)`, `semver_check(t, base_tag, target_tag)`
+      to check if the semver change aligns with the semver specifications
 
   Note both `module_name` and `func_id` needs to be Elixir String. `func_id` is of
   the format "function_name/arity", like "diff/3".
+
+  `change` can only be :major, :minor or :patch. `base_tag` and `target_tag` should both be semver tags.
 
   The diff output uses color and leading symbol to indicate type of change, like below:
   """
@@ -108,11 +111,19 @@ defmodule Interactive do
   """
   def semver_check(%Token{} = token) do
     state = CA.get_state(token.pid)
-    semver_change = get_semver_change(state.base_ref, state.target_ref)
+    semver_check(token, state.base_ref, state.target_ref)
+  end
 
+  def semver_check(%Token{} = token, change) do
+    state = CA.get_state(token.pid)
     state
     |> Map.get(:degree_of_change)
-    |> check_semver(semver_change)
+    |> check_semver(change)
+  end
+
+  def semver_check(%Token{} = token, base_tag, target_tag) do
+    semver_change = get_semver_change(base_tag, target_tag)
+    semver_check(token, semver_change)
   end
 
   ## debug helpers
