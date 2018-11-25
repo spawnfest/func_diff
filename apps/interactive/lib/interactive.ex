@@ -141,7 +141,7 @@ defmodule Interactive do
   end
 
   defp check_semver(change, change), do: {:ok, :valid_semver_change}
-  defp check_semver(expected, changed), do: {:error, "expected :#{expected}, got :#{changed}"}
+  defp check_semver(expected, changed), do: {:warning, "expected :#{expected}, got :#{changed}"}
 
   defp get_semver_change(base_ref, target_ref), do:
     get_semver_change(String.split(base_ref, "."), String.split(target_ref, "."), :major)
