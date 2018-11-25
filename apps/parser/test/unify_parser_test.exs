@@ -20,7 +20,7 @@ defmodule Parser.UnifyTest do
     test "multiple modules" do
       actual = process_file("test/priv/multiple_modules.ex")
 
-      assert [%ModuleInfo{}, %ModuleInfo{}] = actual
+      assert [%ModuleInfo{name: "Module1"}, %ModuleInfo{name: "Module.Test2"}] = actual
     end
 
     test "nested modules" do
@@ -82,22 +82,22 @@ defmodule Parser.UnifyTest do
                  defs: [
                    %Defined{
                      name: :normal3,
-                     start_line: 10,
-                     end_line: 12,
+                     start_line: 16,
+                     end_line: 18,
                      arity: 0,
                      private?: false
                    },
                    %Defined{
                      name: :normal2,
-                     start_line: 6,
-                     end_line: 8,
+                     start_line: 12,
+                     end_line: 14,
                      arity: 0,
                      private?: false
                    },
                    %Defined{
                      name: :normal1,
-                     start_line: 2,
-                     end_line: 4,
+                     start_line: 6,
+                     end_line: 10,
                      arity: 0,
                      private?: false
                    }

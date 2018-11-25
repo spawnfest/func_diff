@@ -1,5 +1,5 @@
 defmodule Module1 do
 end
 
-defmodule Module2 do
+defmodule Module.Test2 do
 end

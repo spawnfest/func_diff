@@ -42,9 +42,11 @@ defmodule Parser.Unify do
     case root_ast do
       {:defmodule, _,
        [
-         {:__aliases__, _, [module_name]},
+         {:__aliases__, _, names},
          [do: do_stuff]
        ]} ->
+        module_name = stringify_module_name(names)
+
         root_module = %ModuleInfo{
           name: to_string(module_name),
           end_line: find_nonempty_line_before(file_lines, length(file_lines)),
@@ -145,7 +147,7 @@ defmodule Parser.Unify do
   def parse(
         lines,
         modules_left,
-        [{:@, [line: l], [{:spec, _, spec_b}]} | block_left],
+        [{:@, [line: l], [{:spec, _, _spec_b}]} | block_left],
         current_df,
         current_module,
         modules_acc
@@ -237,7 +239,7 @@ defmodule Parser.Unify do
         [
           {:defmodule, _,
            [
-             {:__aliases__, _, [module_name]},
+             {:__aliases__, _, names},
              [do: do_stuff]
            ]}
         ],
@@ -245,6 +247,8 @@ defmodule Parser.Unify do
         current_module,
         modules_acc
       ) do
+    module_name = stringify_module_name(names)
+
     another_module = %ModuleInfo{
       name: nested_module_name(current_module.name, module_name),
       end_line: find_nonempty_line_before(lines, current_module.end_line - 1),
@@ -269,7 +273,7 @@ defmodule Parser.Unify do
         [
           {:defmodule, _,
            [
-             {:__aliases__, _, [module_name]},
+             {:__aliases__, _, names},
              [do: do_stuff]
            ]}
           | [{_, [line: next_element_start_line], _} | _] = block_left
@@ -278,6 +282,8 @@ defmodule Parser.Unify do
         current_module,
         modules_acc
       ) do
+    module_name = stringify_module_name(names)
+
     another_module = %ModuleInfo{
       name: nested_module_name(current_module.name, module_name),
       end_line: find_nonempty_line_before(lines, next_element_start_line - 1),
@@ -294,6 +300,11 @@ defmodule Parser.Unify do
       current_module,
       modules_acc
     )
+  end
+
+  # ignore other AST constructs
+  def parse(lines, modules_left, [_ | block_left], current_df, current_module, modules_acc) do
+    parse(lines, modules_left, block_left, current_df, current_module, modules_acc)
   end
 
   ## private helpers
@@ -320,6 +331,12 @@ defmodule Parser.Unify do
     end
   end
 
-  defp nested_module_name(nil, name), do: to_string(name)
-  defp nested_module_name(parent, name), do: parent <> "." <> to_string(name)
+  defp nested_module_name(nil, name), do: name
+  defp nested_module_name(parent, name), do: parent <> "." <> name
+
+  defp stringify_module_name(names) do
+    names
+    |> Enum.map(&to_string/1)
+    |> Enum.join(".")
+  end
 end
