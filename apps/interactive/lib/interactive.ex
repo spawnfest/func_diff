@@ -80,6 +80,7 @@ defmodule Interactive do
     - `module(t, module_name)` to list func diff within a module
     - `func(t, module_name, func_id)` to show source code diff for a given function
     (or macro)
+    - `semver_check(t)` to check if the semver change aligns with the semver specifications
 
   Note both `module_name` and `func_id` needs to be Elixir String. `func_id` is of
   the format "function_name/arity", like "diff/3".
@@ -109,7 +110,6 @@ defmodule Interactive do
     semver_change = get_semver_change(state.base_ref, state.target_ref)
     state
     |> Map.get(:degree_of_change)
-    |> IO.inspect
     |> check_semver(semver_change)
   end
 
