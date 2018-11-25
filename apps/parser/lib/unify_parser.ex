@@ -9,14 +9,16 @@ defmodule Parser.Unify do
             start_line: integer() | nil,
             end_line: integer() | nil,
             arity: integer() | nil,
-            private?: boolean()
+            private?: boolean(),
+            body: String.t() | nil
           }
     defstruct(
       name: nil,
       start_line: nil,
       end_line: nil,
       arity: nil,
-      private?: false
+      private?: false,
+      body: nil
     )
 
     defimpl Inspect do
@@ -96,7 +98,7 @@ defmodule Parser.Unify do
   def parse(lines, modules_left, [], %Defined{} = df, current_module, modules_acc) do
     end_df = %{df | end_line: find_nonempty_line_before(lines, current_module.end_line - 1)}
 
-    new_module = save_defined(end_df, current_module)
+    new_module = save_defined(lines, end_df, current_module)
     parse(lines, modules_left, [], nil, new_module, modules_acc)
   end
 
@@ -123,7 +125,7 @@ defmodule Parser.Unify do
         modules_acc
       ) do
     end_df = %{current_df | end_line: find_nonempty_line_before(lines, l - 1)}
-    new_module = save_defined(end_df, current_module)
+    new_module = save_defined(lines, end_df, current_module)
 
     new_df = %Defined{start_line: l}
 
@@ -162,7 +164,7 @@ defmodule Parser.Unify do
       _ ->
         # function is named, ends `current_df` and start a new one
         end_df = %{current_df | end_line: find_nonempty_line_before(lines, l - 1)}
-        new_module = save_defined(end_df, current_module)
+        new_module = save_defined(lines, end_df, current_module)
 
         new_df = %Defined{start_line: l}
 
@@ -219,7 +221,7 @@ defmodule Parser.Unify do
       _ ->
         # different name, starting a new `Defined`
         end_df = %{current_df | end_line: find_nonempty_line_before(lines, l - 1)}
-        new_module = save_defined(end_df, current_module)
+        new_module = save_defined(lines, end_df, current_module)
 
         new_df = %Defined{
           name: df_name,
@@ -308,11 +310,15 @@ defmodule Parser.Unify do
   end
 
   ## private helpers
-  defp save_defined(df, module) do
+  defp save_defined(lines, df, module) do
     case df.name do
       # incomplete definition
-      nil -> module
-      _ -> %{module | defs: [df | module.defs]}
+      nil ->
+        module
+
+      _ ->
+        df2 = %{df | body: Enum.slice(lines, df.start_line - 1, df.end_line - df.start_line + 1)}
+        %{module | defs: [df2 | module.defs]}
     end
   end
 
