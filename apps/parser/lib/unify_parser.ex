@@ -139,17 +139,18 @@ defmodule Parser.Unify do
   end
 
   # def, defp, defmacro, defmacrop continues or starts a new `Defined`
+  @defcmds [:def, :defp, :defmacro, :defmacrop]
   def parse(
         modules_left,
-        [{:def, [line: l], [{df_name, _, args} | _]} | block_left],
+        [{cmd, [line: l], [{df_name, _, args} | _]} | block_left],
         nil,
         current_module,
         modules_acc
-      ) do
+      ) when cmd in @defcmds do
     new_df = %Defined{
       name: df_name,
       start_line: l,
-      private?: false,
+      private?: cmd in [:defp, :defmacrop],
       arity: count_args(args)
     }
 
@@ -158,11 +159,11 @@ defmodule Parser.Unify do
 
   def parse(
         modules_left,
-        [{:def, [line: l], [{df_name, _, args} | _]} | block_left],
+        [{cmd, [line: l], [{df_name, _, args} | _]} | block_left],
         current_df,
         current_module,
         modules_acc
-      ) do
+      ) when cmd in @defcmds do
     case current_df.name do
       ^df_name ->
         # same function name, continue
@@ -176,7 +177,7 @@ defmodule Parser.Unify do
         new_df = %Defined{
           name: df_name,
           start_line: l,
-          private?: false,
+          private?: cmd in [:defp, :defmacrop],
           arity: count_args(args)
         }
 
