@@ -7,12 +7,14 @@ defmodule Parser do
     @type t() :: %__MODULE__{
             module_name: binary() | nil,
             start_line: integer() | nil,
+            end_line: integer() | nil,
             functions: list(FunctionInfo.t()),
             macros: list(MacroInfo.t())
           }
     defstruct(
       module_name: nil,
       start_line: nil,
+      end_line: nil,
       functions: [],
       macros: []
     )
@@ -56,12 +58,12 @@ defmodule Parser do
 
   def process(file_path), do: parse_file(file_path)
 
-  defp parse_file(file),
-    do:
-      file
-      |> File.read!()
-      |> Code.string_to_quoted!()
-      |> ASTParser.parse()
-      |> List.flatten()
+  defp parse_file(file) do
+    source = File.read!(file)
+    source
+    |> Code.string_to_quoted!(source)
+    |> ASTParser.parse(String.split(source, "\n"))
+    |> List.flatten()
       #|> SourceParser.ajust()
+  end
 end
