@@ -156,7 +156,7 @@ defmodule FuncDiffAPI.ComparisonActor do
       | modules_diff: new_modules_diff,
         module_diff: new_module_diff,
         func_diff: new_func_diff,
-        degree_of_change: :major
+        degree_of_change: :minor
     }
   end
 
