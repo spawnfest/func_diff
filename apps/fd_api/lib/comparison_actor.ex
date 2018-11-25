@@ -146,7 +146,23 @@ defmodule FuncDiffAPI.ComparisonActor do
 
   # deleted module
   defp diff_module(state, base_module, nil) do
-    state
+    new_modules_diff = [{:del, base_module.name} | state.modules_diff]
+
+    mod_diff = Enum.map(base_module.defs, fn df -> {:del, df_id(df)} end)
+    new_module_diff = Map.put(state.module_diff, base_module.name, mod_diff)
+
+    new_func_diff =
+      Enum.reduce(base_module.defs, state.func_diff, fn df, acc ->
+        body_diff = Enum.map(df.body, fn line -> {:del, line} end)
+        Map.put(acc, {base_module.name, df_id(df)}, body_diff)
+      end)
+
+    %{
+      state
+      | modules_diff: new_modules_diff,
+      module_diff: new_module_diff,
+      func_diff: new_func_diff
+    }
   end
 
   # changed/common module
