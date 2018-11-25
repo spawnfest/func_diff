@@ -1,0 +1,2 @@
+defmodule SingleModule do
+end
