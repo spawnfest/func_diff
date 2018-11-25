@@ -17,6 +17,13 @@ defmodule Interactive do
 
   @opaque token() :: Token.t()
 
+  @doc """
+  Start a new process to diff a given `github` repo, comparing `target` to `base`.
+
+  The repo should be in "user/repo" format, `base` and `target` can be any valid
+  git reference (branch, tag, commit hash). All arguments should be of Elixir String
+  type.
+  """
   @spec new_diff(String.t(), String.t(), String.t()) :: token()
   def new_diff(github, base, target) do
     {:ok, pid} = CA.start_link(github: github, base_ref: base, target_ref: target)
@@ -62,6 +69,37 @@ defmodule Interactive do
   end
 
   def func(_, _, _), do: {:error, :invalid_token}
+
+  @help """
+  Start a new diff with `new_diff`, check its doc with `h new_diff`. Use the
+  returned "token" (referenced as `t` below) to read diff interactively.
+
+  Then use:
+
+    - `modules(t)` to list module diff
+    - `module(t, module_name)` to list func diff within a module
+    - `func(t, module_name, func_id)` to show source code diff for a given function
+    (or macro)
+
+  Note both `module_name` and `func_id` needs to be Elixir String. `func_id` is of
+  the format "function_name/arity", like "diff/3".
+
+  The diff output uses color and leading symbol to indicate type of change, like below:
+  """
+  def func_diff_help() do
+    IO.puts(@help)
+
+    [
+      {:add, "this is an added line"},
+      {:del, "this is a deleted line"},
+      {:change, "this indicates a changed module or func"},
+      {:common, "this means it's not changed"}
+    ]
+    |> print_diff()
+
+    IO.puts("Enjoy Func Diff'ing!")
+    IO.puts("")
+  end
 
   ## debug helpers
 
