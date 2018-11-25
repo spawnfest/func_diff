@@ -4,7 +4,17 @@ defmodule FuncDiffAPI.ComparisonActor do
 
   This runs as a `GenServer` so we can cache data and load more
   stuff as requested instead of spending a long time loading
-  everything upfront.
+  everything upfront. (#TODO)
+
+  Diff information is cached at 3 levels:
+
+    - `modules_diff` is a list of `{diff_status, module_name}`
+    - `module_diff` is a Map key'ed by `module_name`, the value is a list of `{diff_status, func_id}`
+    - `func_diff` is a Map key'ed by `{module_name, func_id}`, the value is a "body diff" (list of
+    `{diff_state, line}`)
+
+  `diff_status` can be any of `:add`, `:del`, `:common`, `:change`
+  `func_id` is function (or macro) name + "/" + arity, both module name and func_id needs to be String.
   """
   use GenServer
 
