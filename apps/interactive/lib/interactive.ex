@@ -31,6 +31,7 @@ defmodule Interactive do
     token.pid
     |> CA.get_state()
     |> Map.get(:modules_diff)
+    |> Enum.sort_by(fn {_, name} -> name end)
     |> print_diff()
   end
 
