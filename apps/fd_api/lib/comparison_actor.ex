@@ -27,7 +27,8 @@ defmodule FuncDiffAPI.ComparisonActor do
     :target_modules,
     :modules_diff,
     :module_diff,
-    :func_diff
+    :func_diff,
+    :semver_change
   ]
 
   ## APIs
@@ -93,7 +94,8 @@ defmodule FuncDiffAPI.ComparisonActor do
           target_modules: target_modules,
           modules_diff: [],
           module_diff: %{},
-          func_diff: %{}
+          func_diff: %{},
+          semver_change: :patch
       }
       |> diff()
 
@@ -153,7 +155,8 @@ defmodule FuncDiffAPI.ComparisonActor do
       state
       | modules_diff: new_modules_diff,
         module_diff: new_module_diff,
-        func_diff: new_func_diff
+        func_diff: new_func_diff,
+        semver_change: :major
     }
   end
 
@@ -173,11 +176,14 @@ defmodule FuncDiffAPI.ComparisonActor do
       |> Enum.into(%{})
       |> Map.merge(state.func_diff)
 
+    new_semver_change = 
+
     %{
       state
       | modules_diff: new_modules_diff,
         module_diff: new_module_diff,
-        func_diff: new_func_diff
+        func_diff: new_func_diff,
+        semver_change: :major
     }
   end
 

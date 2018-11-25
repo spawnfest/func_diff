@@ -101,6 +101,16 @@ defmodule Interactive do
     IO.puts("")
   end
 
+  @doc """
+  Check if the changes follow semver convention
+  """
+  def semver_check(%Token{} = token) do
+    state = CA.get_state(token.pid)
+    state
+    |> Map.get(:func_diff)
+    |> SemverChecker.process(state.base_ref, state.target_ref)
+  end
+
   ## debug helpers
 
   def debug_state(%Token{} = token) do
