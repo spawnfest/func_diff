@@ -44,6 +44,7 @@ defmodule FuncDiffAPI.ComparisonActor do
   @impl true
   def init(github: github, base_ref: base, target_ref: target) do
     wd = Application.get_env(:fd_api, :working_dir)
+    File.mkdir_p!(wd)
     r = Runner.Git.Repo.from_github(github, working_dir: wd)
 
     init_state = %__MODULE__{
