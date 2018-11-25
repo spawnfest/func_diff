@@ -36,7 +36,7 @@ defmodule Interactive do
   end
 
   def debug_print() do
-    diff = [
+    [
       {:add, "line0"},
       {:common, "line1"},
       {:common, "line2"},
@@ -45,7 +45,10 @@ defmodule Interactive do
       {:common, "line5"},
       {:del, "line6"}
     ]
+    |> print_diff()
+  end
 
+  defp print_diff(diff) do
     Enum.each(diff, fn
       {:add, line} ->
         IO.ANSI.format([:light_green_background, :black, "+ " <> line]) |> IO.puts()
