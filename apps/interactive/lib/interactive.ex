@@ -68,19 +68,6 @@ defmodule Interactive do
     CA.get_state(token.pid)
   end
 
-  def debug_print() do
-    [
-      {:add, "line0"},
-      {:common, "line1"},
-      {:common, "line2"},
-      {:del, "line3"},
-      {:add, "line4"},
-      {:common, "line5"},
-      {:del, "line6"}
-    ]
-    |> print_diff()
-  end
-
   defp print_diff(diff) do
     Enum.each(diff, fn
       {:add, line} ->
@@ -89,7 +76,8 @@ defmodule Interactive do
       {:del, line} ->
         IO.ANSI.format([:light_black_background, :light_cyan, deco_line("-", line)]) |> IO.puts()
 
-      # TODO: changed, "! "
+      {:change, line} ->
+        IO.ANSI.format([:light_blue_background, :white, deco_line("!", line)]) |> IO.puts()
 
       {:common, line} ->
         deco_line(" ", line) |> IO.puts()
