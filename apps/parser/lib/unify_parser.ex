@@ -40,53 +40,67 @@ defmodule Parser.Unify do
     root_ast = Code.string_to_quoted!(file_content)
 
     case root_ast do
-      {:defmodule, meta,
+      {:defmodule, _,
        [
-         {:__aliases__, meta, [module_name]},
+         {:__aliases__, _, [module_name]},
          [do: do_stuff]
        ]} ->
         root_module = %ModuleInfo{
-          name: module_name,
+          name: to_string(module_name),
           end_line: find_nonempty_line_before(file_lines, length(file_lines)),
           defs: []
         }
 
-        blocks = list_do_block(do_stuff)
+        block = list_do_block(do_stuff)
 
-        parse([], blocks, nil, root_module, [])
+        parse(file_lines, [], block, nil, root_module, [])
 
-      other ->
-        IO.inspect(other)
+      {:__block__, _, block} ->
+        # create an empty module and let `parse` handle defmodule
+        empty_module = %ModuleInfo{
+          name: nil,
+          end_line: length(file_lines)
+        }
+
+        parse(file_lines, [], block, nil, empty_module, [])
     end
   end
 
-  # parse(modules_left, block_left, current_defined, current_module, modules_acc)
+  # parse(file_lines, modules_left, block_left, current_defined, current_module, modules_acc)
   # modules_left is a list of { %ModuleInfo{}, block }
 
   # all things parsed
-  def parse([], [], nil, nil, modules_acc), do: modules_acc
+  def parse(_, [], [], nil, nil, modules_acc), do: modules_acc
 
   # more module to parse
-  def parse([h | t], [], nil, nil, modules_acc) do
+  def parse(lines, [h | t], [], nil, nil, modules_acc) do
     {current_module, block} = h
-    parse(t, block, nil, current_module, modules_acc)
+    parse(lines, t, block, nil, current_module, modules_acc)
   end
 
   # module parsed
-  def parse(modules_left, [], nil, current_module, modules_acc) do
-    parse(modules_left, [], nil, nil, [current_module | modules_acc])
+  def parse(lines, modules_left, [], nil, current_module, modules_acc) do
+    case current_module.name do
+      nil ->
+        # empty module, ignored
+        parse(lines, modules_left, [], nil, nil, modules_acc)
+
+      _ ->
+        parse(lines, modules_left, [], nil, nil, [current_module | modules_acc])
+    end
   end
 
   # last `Defined` in a module
-  def parse(modules_left, [], %Defined{} = df, current_module, modules_acc) do
-    end_df = %{df | end_line: current_module.end_line - 1}
+  def parse(lines, modules_left, [], %Defined{} = df, current_module, modules_acc) do
+    end_df = %{df | end_line: find_nonempty_line_before(lines, current_module.end_line - 1)}
 
     new_module = save_defined(end_df, current_module)
-    parse(modules_left, [], nil, new_module, modules_acc)
+    parse(lines, modules_left, [], nil, new_module, modules_acc)
   end
 
   # @doc starts a new `current_df`
   def parse(
+        lines,
         modules_left,
         [{:@, [line: l], [{:doc, _, _}]} | block_left],
         nil,
@@ -95,26 +109,28 @@ defmodule Parser.Unify do
       ) do
     new_df = %Defined{start_line: l}
 
-    parse(modules_left, block_left, new_df, current_module, modules_acc)
+    parse(lines, modules_left, block_left, new_df, current_module, modules_acc)
   end
 
   def parse(
+        lines,
         modules_left,
         [{:@, [line: l], [{:doc, _, _}]} | block_left],
         current_df,
         current_module,
         modules_acc
       ) do
-    end_df = %{current_df | end_line: l - 1}
+    end_df = %{current_df | end_line: find_nonempty_line_before(lines, l - 1)}
     new_module = save_defined(end_df, current_module)
 
     new_df = %Defined{start_line: l}
 
-    parse(modules_left, block_left, new_df, new_module, modules_acc)
+    parse(lines, modules_left, block_left, new_df, new_module, modules_acc)
   end
 
   # @spec continues or starts a new `Defined`
   def parse(
+        lines,
         modules_left,
         [{:@, [line: l], [{:spec, _, _}]} | block_left],
         nil,
@@ -123,10 +139,11 @@ defmodule Parser.Unify do
       ) do
     new_df = %Defined{start_line: l}
 
-    parse(modules_left, block_left, new_df, current_module, modules_acc)
+    parse(lines, modules_left, block_left, new_df, current_module, modules_acc)
   end
 
   def parse(
+        lines,
         modules_left,
         [{:@, [line: l], [{:spec, _, spec_b}]} | block_left],
         current_df,
@@ -138,28 +155,30 @@ defmodule Parser.Unify do
     case current_df.name do
       nil ->
         # continue from @doc
-        parse(modules_left, block_left, current_df, current_module, modules_acc)
+        parse(lines, modules_left, block_left, current_df, current_module, modules_acc)
 
       _ ->
         # function is named, ends `current_df` and start a new one
-        end_df = %{current_df | end_line: l - 1}
+        end_df = %{current_df | end_line: find_nonempty_line_before(lines, l - 1)}
         new_module = save_defined(end_df, current_module)
 
         new_df = %Defined{start_line: l}
 
-        parse(modules_left, block_left, new_df, new_module, modules_acc)
+        parse(lines, modules_left, block_left, new_df, new_module, modules_acc)
     end
   end
 
   # def, defp, defmacro, defmacrop continues or starts a new `Defined`
   @defcmds [:def, :defp, :defmacro, :defmacrop]
   def parse(
+        lines,
         modules_left,
         [{cmd, [line: l], [{df_name, _, args} | _]} | block_left],
         nil,
         current_module,
         modules_acc
-      ) when cmd in @defcmds do
+      )
+      when cmd in @defcmds do
     new_df = %Defined{
       name: df_name,
       start_line: l,
@@ -167,24 +186,37 @@ defmodule Parser.Unify do
       arity: count_args(args)
     }
 
-    parse(modules_left, block_left, new_df, current_module, modules_acc)
+    parse(lines, modules_left, block_left, new_df, current_module, modules_acc)
   end
 
   def parse(
+        lines,
         modules_left,
         [{cmd, [line: l], [{df_name, _, args} | _]} | block_left],
         current_df,
         current_module,
         modules_acc
-      ) when cmd in @defcmds do
+      )
+      when cmd in @defcmds do
     case current_df.name do
       ^df_name ->
         # same function name, continue
-        parse(modules_left, block_left, current_df, current_module, modules_acc)
+        parse(lines, modules_left, block_left, current_df, current_module, modules_acc)
+
+      nil ->
+        # conitnue from @doc or @spec, but fill in info
+        updated_df = %{
+          current_df
+          | name: df_name,
+            private?: cmd in [:defp, :defmacrop],
+            arity: count_args(args)
+        }
+
+        parse(lines, modules_left, block_left, updated_df, current_module, modules_acc)
 
       _ ->
         # different name, starting a new `Defined`
-        end_df = %{current_df | end_line: l - 1}
+        end_df = %{current_df | end_line: find_nonempty_line_before(lines, l - 1)}
         new_module = save_defined(end_df, current_module)
 
         new_df = %Defined{
@@ -194,11 +226,75 @@ defmodule Parser.Unify do
           arity: count_args(args)
         }
 
-        parse(modules_left, block_left, new_df, new_module, modules_acc)
+        parse(lines, modules_left, block_left, new_df, new_module, modules_acc)
     end
   end
 
   # defmodule updates modules_left
+  def parse(
+        lines,
+        modules_left,
+        [
+          {:defmodule, _,
+           [
+             {:__aliases__, _, [module_name]},
+             [do: do_stuff]
+           ]}
+        ],
+        current_df,
+        current_module,
+        modules_acc
+      ) do
+    another_module = %ModuleInfo{
+      name: nested_module_name(current_module.name, module_name),
+      end_line: find_nonempty_line_before(lines, current_module.end_line - 1),
+      defs: []
+    }
+
+    another_block = list_do_block(do_stuff)
+
+    parse(
+      lines,
+      [{another_module, another_block} | modules_left],
+      [],
+      current_df,
+      current_module,
+      modules_acc
+    )
+  end
+
+  def parse(
+        lines,
+        modules_left,
+        [
+          {:defmodule, _,
+           [
+             {:__aliases__, _, [module_name]},
+             [do: do_stuff]
+           ]}
+          | [{_, [line: next_element_start_line], _} | _] = block_left
+        ],
+        current_df,
+        current_module,
+        modules_acc
+      ) do
+    another_module = %ModuleInfo{
+      name: nested_module_name(current_module.name, module_name),
+      end_line: find_nonempty_line_before(lines, next_element_start_line - 1),
+      defs: []
+    }
+
+    another_block = list_do_block(do_stuff)
+
+    parse(
+      lines,
+      [{another_module, another_block} | modules_left],
+      block_left,
+      current_df,
+      current_module,
+      modules_acc
+    )
+  end
 
   ## private helpers
   defp save_defined(df, module) do
@@ -223,4 +319,7 @@ defmodule Parser.Unify do
       _ -> lineno
     end
   end
+
+  defp nested_module_name(nil, name), do: to_string(name)
+  defp nested_module_name(parent, name), do: parent <> "." <> to_string(name)
 end
