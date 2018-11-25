@@ -202,7 +202,7 @@ defmodule FuncDiffAPI.ComparisonActor do
         b = Map.get(target_defs_map, func_id, nil)
 
         {diff_bd, new_degree_of_change} = diff_body(a, b)
-        {[diff_bd|diff_bodies], update_semver(new_degree_of_change, degree_of_change)}
+        {[diff_bd | diff_bodies], update_semver(new_degree_of_change, degree_of_change)}
       end)
 
     mod_status =

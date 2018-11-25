@@ -53,15 +53,26 @@ defmodule Runner.Diff do
 
   defp parse_diff(lines, ["<" <> _ | rest_diff], {pos_a, offset_a, offset_modifier} = a, b) do
     parse_diff(
-      List.update_at(lines, pos_a - 1 + offset_a, fn {:common, line} -> {:del, line}
-      _ -> require IEx; IEx.pry end),
+      List.update_at(lines, pos_a - 1 + offset_a, fn
+        {:common, line} ->
+          {:del, line}
+
+        _ ->
+          require IEx
+          IEx.pry()
+      end),
       rest_diff,
       {pos_a + 1, offset_a, offset_modifier},
       b
     )
   end
 
-  defp parse_diff(lines, [">" <> _ | rest_diff], {pos_a, offset_a, offset_modifier}, {lines_b, pos_b}) do
+  defp parse_diff(
+         lines,
+         [">" <> _ | rest_diff],
+         {pos_a, offset_a, offset_modifier},
+         {lines_b, pos_b}
+       ) do
     add_line = {:add, Enum.at(lines_b, pos_b - 1)}
 
     parse_diff(

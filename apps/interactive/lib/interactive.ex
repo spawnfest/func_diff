@@ -71,6 +71,7 @@ defmodule Interactive do
   def func(_, _, _), do: {:error, :invalid_token}
 
   @help """
+
   Start a new diff with `new_diff`, check its doc with `h new_diff`. Use the
   returned "token" (referenced as `t` below) to read diff interactively.
 
@@ -108,6 +109,7 @@ defmodule Interactive do
   def semver_check(%Token{} = token) do
     state = CA.get_state(token.pid)
     semver_change = get_semver_change(state.base_ref, state.target_ref)
+
     state
     |> Map.get(:degree_of_change)
     |> check_semver(semver_change)
@@ -143,11 +145,11 @@ defmodule Interactive do
   defp check_semver(change, change), do: {:ok, :valid_semver_change}
   defp check_semver(expected, changed), do: {:warning, "expected :#{expected}, got :#{changed}"}
 
-  defp get_semver_change(base_ref, target_ref), do:
-    get_semver_change(String.split(base_ref, "."), String.split(target_ref, "."), :major)
+  defp get_semver_change(base_ref, target_ref),
+    do: get_semver_change(String.split(base_ref, "."), String.split(target_ref, "."), :major)
+
   defp get_semver_change([], [], _), do: :semver_not_changed
-  defp get_semver_change([n|tb], [n|tt], change), do:
-    get_semver_change(tb, tt, next(change))
+  defp get_semver_change([n | tb], [n | tt], change), do: get_semver_change(tb, tt, next(change))
   defp get_semver_change(_, _, change), do: change
 
   defp next(:major), do: :minor
