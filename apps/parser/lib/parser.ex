@@ -143,7 +143,7 @@ defmodule Parser do
   # obtain function name from the same line as def/defp
   defp parse_function([{name, meta, _args_info} | _t], func_info = %{start_line: start_line}) do
     case Keyword.get(meta, :line) == start_line do
-      true -> %{func_info | function_name: name}
+      true -> %{func_info | function_name: Atom.to_string(name)}
       false -> func_info
     end
   end
