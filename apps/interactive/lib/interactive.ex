@@ -39,7 +39,12 @@ defmodule Interactive do
   @doc """
   List differences at a single module's level
   """
-  def module(%Token{} = _token, module) do
+  def module(%Token{} = token, module) when is_binary(module) do
+    token.pid
+    |> CA.get_state()
+    |> Map.get(:module_diff)
+    |> Map.get(module)
+    |> print_diff()
   end
 
   def module(_, _), do: {:error, :invalid_token}
@@ -47,7 +52,12 @@ defmodule Interactive do
   @doc """
   List diff of a single function/macro
   """
-  def func(%Token{} = _token, module, func) do
+  def func(%Token{} = token, module, func) when is_binary(module) do
+    token.pid
+    |> CA.get_state()
+    |> Map.get(:func_diff)
+    |> Map.get({module, func})
+    |> print_diff()
   end
 
   def func(_, _, _), do: {:error, :invalid_token}
