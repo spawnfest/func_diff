@@ -183,6 +183,15 @@ defmodule Parser.Unify do
         modules_acc
       )
       when cmd in @defcmds do
+    # handle guards
+    {df_name, _, args} =
+      if df_name == :when do
+        [actual_def | _] = args
+        actual_def
+      else
+        {df_name, nil, args}
+      end
+
     new_df = %Defined{
       name: df_name,
       start_line: l,
@@ -202,6 +211,15 @@ defmodule Parser.Unify do
         modules_acc
       )
       when cmd in @defcmds do
+    # handle guards
+    {df_name, _, args} =
+      if df_name == :when do
+        [actual_def | _] = args
+        actual_def
+      else
+        {df_name, nil, args}
+      end
+
     case current_df.name do
       ^df_name ->
         # same function name, continue

@@ -184,5 +184,23 @@ defmodule Parser.UnifyTest do
                }
              ] = actual
     end
+
+    test "with guard" do
+      actual = process_file("test/priv/functions/guard.ex")
+
+      assert [
+               %ModuleInfo{
+                 defs: [
+                   %Defined{
+                     name: :with_guard,
+                     start_line: 2,
+                     end_line: 11,
+                     arity: 1,
+                     private?: false
+                   }
+                 ]
+               }
+             ] = actual
+    end
   end
 end
