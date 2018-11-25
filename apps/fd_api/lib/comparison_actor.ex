@@ -28,7 +28,7 @@ defmodule FuncDiffAPI.ComparisonActor do
     :modules_diff,
     :module_diff,
     :func_diff,
-    :semver_change
+    :degree_of_change
   ]
 
   ## APIs
@@ -95,7 +95,7 @@ defmodule FuncDiffAPI.ComparisonActor do
           modules_diff: [],
           module_diff: %{},
           func_diff: %{},
-          semver_change: :patch
+          degree_of_change: :patch
       }
       |> diff()
 
@@ -156,7 +156,7 @@ defmodule FuncDiffAPI.ComparisonActor do
       | modules_diff: new_modules_diff,
         module_diff: new_module_diff,
         func_diff: new_func_diff,
-        semver_change: :major
+        degree_of_change: :major
     }
   end
 
@@ -176,14 +176,12 @@ defmodule FuncDiffAPI.ComparisonActor do
       |> Enum.into(%{})
       |> Map.merge(state.func_diff)
 
-    new_semver_change = 
-
     %{
       state
       | modules_diff: new_modules_diff,
         module_diff: new_module_diff,
         func_diff: new_func_diff,
-        semver_change: :major
+        degree_of_change: :major
     }
   end
 
@@ -197,13 +195,14 @@ defmodule FuncDiffAPI.ComparisonActor do
     set_a = base_defs_map |> Map.keys() |> MapSet.new()
     set_b = target_defs_map |> Map.keys() |> MapSet.new()
 
-    defs_diff =
+    {defs_diff, degree_of_change} =
       MapSet.union(set_a, set_b)
-      |> Enum.map(fn func_id ->
+      |> Enum.reduce({[], state.degree_of_change}, fn func_id, {diff_bodies, degree_of_change} ->
         a = Map.get(base_defs_map, func_id, nil)
         b = Map.get(target_defs_map, func_id, nil)
 
-        diff_body(a, b)
+        {diff_bd, new_degree_of_change} = diff_body(a, b)
+        {[diff_bd|diff_bodies], update_semver(new_degree_of_change, degree_of_change)}
       end)
 
     mod_status =
@@ -230,18 +229,19 @@ defmodule FuncDiffAPI.ComparisonActor do
       state
       | modules_diff: new_modules_diff,
         module_diff: new_module_diff,
-        func_diff: new_func_diff
+        func_diff: new_func_diff,
+        degree_of_change: degree_of_change
     }
   end
 
   defp diff_body(nil, target_df) do
     body_diff = Enum.map(target_df.body, fn line -> {:add, line} end)
-    {:add, df_id(target_df), body_diff}
+    {{:add, df_id(target_df), body_diff}, df_degree_of_change(target_df.private?)}
   end
 
   defp diff_body(base_df, nil) do
     body_diff = Enum.map(base_df.body, fn line -> {:del, line} end)
-    {:del, df_id(base_df), body_diff}
+    {{:del, df_id(base_df), body_diff}, df_degree_of_change(base_df.private?)}
   end
 
   defp diff_body(base_df, target_df) do
@@ -250,12 +250,21 @@ defmodule FuncDiffAPI.ComparisonActor do
 
     if String.equivalent?(text_a, text_b) do
       body_diff = Enum.map(target_df.body, fn line -> {:common, line} end)
-      {:common, df_id(target_df), body_diff}
+      {{:common, df_id(target_df), body_diff}, nil}
     else
       body_diff = Runner.Diff.diff(text_a, text_b)
-      {:change, df_id(target_df), body_diff}
+      {{:change, df_id(target_df), body_diff}, :patch}
     end
   end
+
+  defp df_degree_of_change(private?)
+  defp df_degree_of_change(true), do: :minor
+  defp df_degree_of_change(false), do: :major
+
+  defp update_semver(new, old) when new == :major or old == :major, do: :major
+  defp update_semver(new, old) when new == :minor or old == :minor, do: :minor
+  defp update_semver(nil, semver), do: semver
+  defp update_semver(new, _), do: new
 
   defp df_id(df), do: "#{df.name}/#{df.arity}"
 end
