@@ -3,39 +3,86 @@ defmodule ParserTest do
 
   import Parser, only: [process: 1]
 
-  describe "process" do
+  describe "process/1" do
     test "single empty module" do
+      actual = process("test/priv/single_empty_module.ex")
+
       assert [
                %Parser.ModuleInfo{
                  module_name: "SingleModule",
                  functions: [],
                  macros: []
                }
-             ] = process("test/priv/single_empty_module.ex")
+             ] = actual
     end
 
     test "multiple modules" do
-      assert [%Parser.ModuleInfo{}, %Parser.ModuleInfo{}] =
-               process("test/priv/multiple_modules.ex")
+      actual = process("test/priv/multiple_modules.ex")
+
+      assert [%Parser.ModuleInfo{}, %Parser.ModuleInfo{}] = actual
     end
 
     test "nested modules" do
-      expected = [
-        %Parser.ModuleInfo{
-          module_name: "Outer",
-          start_line: 1,
-          functions: [],
-          macros: []
-        },
-        %Parser.ModuleInfo{
-          module_name: "Outer.Inner",
-          start_line: 2,
-          functions: [],
-          macros: []
-        }
-      ]
+      actual = process("test/priv/nested_modules.ex")
 
-      assert expected == process("test/priv/nested_modules.ex")
+      assert [
+               %Parser.ModuleInfo{
+                 module_name: "Outer"
+               },
+               %Parser.ModuleInfo{
+                 module_name: "Outer.Inner"
+               }
+             ] = actual
+    end
+
+    test "one line function" do
+      actual = process("test/priv/functions/one_line.ex")
+
+      assert [
+               %Parser.ModuleInfo{
+                 functions: [
+                   %Parser.FunctionInfo{
+                     function_name: "one_line"
+                   }
+                 ]
+               }
+             ] = actual
+    end
+
+    test "module with a single function" do
+      actual = process("test/priv/functions/single.ex")
+
+      assert [
+               %Parser.ModuleInfo{
+                 functions: [
+                   %Parser.FunctionInfo{
+                     function_name: "single"
+                   }
+                 ]
+               }
+             ] = actual
+    end
+
+    test "normal module" do
+      actual = process("test/priv/functions/normal.ex")
+
+      assert [
+               %Parser.ModuleInfo{
+                 functions: [
+                   %Parser.FunctionInfo{
+                     function_name: "normal1"
+                   },
+                   %Parser.FunctionInfo{
+                     function_name: "normal2"
+                   }
+                 ],
+                 macros: [
+                   %Parser.MacroInfo{
+                     macro_name: "normal3"
+                   }
+                 ]
+               }
+             ] = actual
     end
   end
 end

@@ -5,14 +5,8 @@ Parse Elixir code.
 TODO:
 
 - function arity
+- function public/private
 - function end line (or read the body text)
-
-- add some tests for confidence
-  - single module
-  - multiple module
-  - nested module
-  - one line function
-  - multi bodies function
-  - function with deeper level of case/if (nested `end`)
+  - include doc and type spec
 
 - parse Erlang codes
